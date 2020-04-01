@@ -1,51 +1,71 @@
 #import bibliotek
 import requests
 from bs4 import BeautifulSoup
+import json
+import pprint
+
+#funkcja do ekstrakcji składowych opinii
+def extract_feature(opinion, tag, tag_class, child=None):
+    try:
+        if child:
+            return opinion.find(tag,tag_class).find(child).get_text().strip()
+        else:
+            return opinion.find(tag,tag_class).get_text().strip()
+    except AttributeError:
+        return None
+
+tags = {
+            "recomendation": ["div", "product-review-summary", "em"],
+            "stars": ["span", "review-score-count"],
+            "content": ["p", "product-review-body"],
+            "author": ["div", "reviewer-name-line"],
+            "pros": ["div", "pros-cell", "ul"],
+            "cons": ["div", "cons-cell", "ul"],
+            "useful": ["button", "vote-yes", "span"],
+            "useless": ["button", "vote-no", "span"],
+            "purchased": ["div", "product-review-pz", "em"],
+        }
 
 #adres URL przykładowej strony z opiniami
-url = "https://www.ceneo.pl/86370800#tab=reviews"
+url_prefix = "https://www.ceneo.pl"
+product_id = input("Podaj kod produktu: ")
+url_postfix = "#tab=reviews"
+url = url_prefix + "/" + product_id + url_postfix
 
-#pobranie kodu HTML strony z podanego URL
-page_respons = requests.get(url)
-page_tree = BeautifulSoup(page_respons.text, 'html.parser')
+#pusta lista na wszystkie opinie o produkcie
+opinions_list = []
 
-#wydobycie z kodu HTML strony fragmentów odpowiadających poszczególnym opiniom
-opinions = page_tree.find_all("li", "review-box")
+while url:
+    #pobranie kodu HTML strony z podanego URL
+    page_respons = requests.get(url)
+    page_tree = BeautifulSoup(page_respons.text, 'html.parser')
 
-#wydobycie składowych dla pojedynczyej opinii
-for opinion in opinions:
-    opinion_id = opinion["data-entry-id"]
-    author = opinion.find("div", "reviewer-name-line").string
-    try:
-        recomendation = opinion.find("div", "product-review-summary").find("em").string
-    except AttributeError:
-        recomendation = None
+    #wydobycie z kodu HTML strony fragmentów odpowiadających poszczególnym opiniom
+    opinions = page_tree.find_all("li", "js_product-review")
 
-    stars = opinion.find("span", "review-score-count")
-    try:
-        purchased = opinion.find("div", "product-review-pz")
-    except AttributeError:
-        purchased = None
-    dates = opinion.find("span", "review-time").find_all("time")
-    review_date = dates.pop(0)["datetime"]
-    try:
-        purchase_date = dates.pop(0)["datetime"]
-    except AttributeError:
-        purchase_date = None
-
-    useful = opinion.find("button", "vote-yes").find("span").string
-    useless = opinion.find("button", "vote-no").find("span").string
-    content = opinion.find("p", "product-review-body").get_text()
+    #wydobycie składowych dla pojedynczyej opinii
+    for opinion in opinions:
+        features = {key:extract_features(opinion, *args)
+                    for key, arg in tags.items()}
+        features["purchased"] = (features["purchased"]=="Opinia potwierdzona zakupem")           
+        features["opinion_id"] = opinion["data-entry-id"]
+        dates = opinion.find("span", "review-time").find_all("time")
+        features["opinion_date"] = dates.pop(0)["datetime"]
+        try:
+            features["purchase_date"] = dates.pop(0)["datetime"]
+        except IndexError:
+            features["purchase_date"] = None
+        
+        opinions_list.append(features)
 
     try:
-        pros = opinion.find("div", "pros-cell").find("ul").get_text()
-    except AttributeError:
-        pros = None
+        url = url_prefix+page_tree.find("a", "pagination__next")["href"]
+    except TypeError:
+        url = None
+    print(url)
 
-    try:
-        cons = opinion.find("div", "cons-cell").find("ul").get_text()
-    except AttributeError:
-        cons = None
+with open("./opinions_json/"+product_id+'.json', 'w', encoding="utf-8") as fp:
+    json.dump(opinions_list, fp, ensure_ascii=False, indent=4, separators=(',', ': '))
 
-    #print(opinion_id, author, recomendation, useful, useless, content, stars, purchased)
-    print(opinion_id, recomendation, stars, content, author, pros, cons, useful, useless, purchased, purchase_date, review_date)
+print(len(opinions_list))
+# pprint.pprint(opinions_list)
