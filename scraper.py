@@ -48,7 +48,12 @@ while url:
         features = {key:extract_features(opinion, *args)
                     for key, arg in tags.items()}
         features["purchased"] = (features["purchased"]=="Opinia potwierdzona zakupem")           
-        features["opinion_id"] = opinion["data-entry-id"]
+        features["opinion_id"] = int(opinion["data-entry-id"])
+        features["useful"] = int(features["useful"])
+        features["useless"] = int(features["useless"])
+        features["content"] = features["content"].replace("\n", ", ").replace("\r", ", ")
+        features["pros"] = features["pros"].replace("\n", ", ").replace("\r", ", ")
+        features["cons"] = features["cons"].replace("\n", ", ").replace("\r", ", ")
         dates = opinion.find("span", "review-time").find_all("time")
         features["opinion_date"] = dates.pop(0)["datetime"]
         try:
