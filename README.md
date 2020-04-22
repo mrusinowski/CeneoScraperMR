@@ -49,3 +49,4 @@
             /requirements.txt
             /README.md
             /.venv
+- widok (Jinja)

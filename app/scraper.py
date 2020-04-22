@@ -61,7 +61,7 @@ while url:
         features["content"] = remove_whitespaces(features["content"])
         features["pros"] = remove_whitespaces(features["pros"])
         features["cons"] = remove_whitespaces(features["cons"])
-        dates = opinion.find("span", "review-time").find_all("time")
+        dates = opinion.find("span", "review-time").find_all("time")p
         features["opinion_date"] = dates.pop(0)["datetime"]
         try:
             features["purchase_date"] = dates.pop(0)["datetime"]
