@@ -36,7 +36,7 @@ class Product:
             opinions_count = 0
         if opinions_count > 0:
             while url:
-                #poranie kodu html strony zpodanego URL
+                #pobranie kodu html strony z podanego URL
                 page_respons = requests.get(url)
                 page_tree = BeautifulSoup(page_respons.text, 'html.parser')
 
